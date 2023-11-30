@@ -28,8 +28,8 @@ def get_item(request, item_id):
 
 def buy_item(request, item_id):
     if request.method == 'GET':
-        item_to_purchase = get_object_or_404(Item, pk=item_id)
-        project_stripe_obj = ProjectStripeSession(obj_name=item_to_purchase, obj_price=item_to_purchase.price)
+        item = get_object_or_404(Item, pk=item_id)
+        project_stripe_obj = ProjectStripeSession(obj_name=item, obj_price=item.price, obj_currency=item.currency)
         stripe_session = project_stripe_obj.make_session()
         response_data = {'stripe_session_id': stripe_session['id'], 'checkout_url': stripe_session['url']}
         return JsonResponse(response_data)

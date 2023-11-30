@@ -16,10 +16,11 @@ class ProjectStripeSession:
     The make_session() method can be used externally.
     """
 
-    def __init__(self, obj_name: str, obj_price: float):
+    def __init__(self, obj_name: str, obj_price: float, obj_currency: str):
         self.API_KEY = settings.STRIPE_API_KEY
         self.obj_name = obj_name
-        self.obj_price = int(obj_price)
+        self.obj_price = int(obj_price * 100)
+        self.obj_currency = obj_currency
         stripe.api_key = settings.STRIPE_API_KEY
 
     def __create_stripe_product(self) -> dict:
@@ -36,7 +37,7 @@ class ProjectStripeSession:
         try:
             stripe_price = stripe.Price.create(
                 unit_amount=self.obj_price,
-                currency="usd",
+                currency=self.obj_currency,
                 product=f"{stripe_product['id']}",
             )
             return stripe_price
