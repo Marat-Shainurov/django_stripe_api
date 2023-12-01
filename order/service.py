@@ -37,6 +37,15 @@ class ProjectStripeSession:
             converted_price = int(item.price) * self.smallest_cur_unit_ratio * self.conversion_rate
             return converted_price, 'usd'
 
+    def __create_stripe_tax(self):
+        stripe_tax = stripe.TaxRate.create(
+            percentage=self.tax.rate,
+            description=f'Tax {self.tax.id}',
+            display_name=f'Tax {self.tax.id}',
+            inclusive=False,
+        )
+        return stripe_tax
+
     def __create_stripe_product(self) -> list[dict]:
         """Creates a new stripe product object"""
         stripe_products_list = []
@@ -88,9 +97,6 @@ class ProjectStripeSession:
                 raise ProjectStripeError(f'Error during creating Stripe price: {str(e)}')
         return stripe_prices_list
 
-    def __create_stripe_tax(self):
-        pass
-
     def __create_stripe_discount(self):
         items_have_same_cur = len({item.currency for item in self.items}) == 1
         if len(self.items) == 1:
@@ -115,13 +121,19 @@ class ProjectStripeSession:
         """Creates a new stripe session."""
         stripe_prices = self.__create_stripe_price_list()
         stripe_discounts = self.__create_stripe_discount() if self.discount else None
+        stripe_tax = self.__create_stripe_tax() if self.tax else None
         try:
             stripe_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
                 success_url="https://example.com/success",
-                line_items=[{"price": f"{price['id']}", "quantity": 1} for price in stripe_prices],
+                line_items=[
+                    {
+                        "price": f"{price['id']}",
+                        "quantity": 1,
+                        'tax_rates': [stripe_tax['id']] if self.tax else None
+                    } for price in stripe_prices],
                 mode="payment",
-                discounts=[{'coupon': stripe_discounts['id']}] if self.discount else None
-            )
+                discounts=[{'coupon': stripe_discounts['id']}] if self.discount else None)
             return stripe_session
         except StripeError as e:
             raise ProjectStripeError(f'Error during creating Stripe session: {str(e)}')
