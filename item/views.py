@@ -4,7 +4,7 @@ from django.http import Http404, JsonResponse, HttpRequest
 from django.shortcuts import render, get_object_or_404, redirect
 
 from item.models import Item
-from item.service import ProjectStripeSession
+from order.service import ProjectStripeSession
 
 
 def get_item(request, item_id):
@@ -22,14 +22,14 @@ def get_item(request, item_id):
             item = get_object_or_404(Item, pk=item_id)
         except Http404:
             return {'detail': 'Not found'}
-        context = {'item': item}
+        context = {'item': item, 'page_title': 'Buy Item'}
         return render(request, 'item/get_item.html', context)
 
 
 def buy_item(request, item_id):
     if request.method == 'GET':
         item = get_object_or_404(Item, pk=item_id)
-        project_stripe_obj = ProjectStripeSession(obj_name=item, obj_price=item.price, obj_currency=item.currency)
+        project_stripe_obj = ProjectStripeSession(items=[item])
         stripe_session = project_stripe_obj.make_session()
         response_data = {'stripe_session_id': stripe_session['id'], 'checkout_url': stripe_session['url']}
         return JsonResponse(response_data)
