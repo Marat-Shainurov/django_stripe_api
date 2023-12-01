@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.views import generic
 
+from config.settings import SMALLEST_CURRENCY_UNIT_RATIO
 from order.service import ProjectStripeSession
 from order.forms import OrderForm
 from order.models import Order
@@ -28,8 +29,11 @@ class CreateOrderView(generic.CreateView):
                     discount=discount,
                     tax=tax)
                 stripe_session = project_stripe_obj.make_session()
-                self.request.session['checkout_url'] = stripe_session['url']
+                self.object.total_price = stripe_session['amount_total'] / SMALLEST_CURRENCY_UNIT_RATIO
+                self.object.currency = stripe_session['currency']
+                self.object.save()
 
+                self.request.session['checkout_url'] = stripe_session['url']
                 return super().form_valid(form)
             else:
                 ValidationError('Select items for your order')

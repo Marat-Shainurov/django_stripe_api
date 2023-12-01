@@ -4,6 +4,7 @@ from stripe.api_resources.checkout import Session
 from stripe.error import StripeError
 
 from config import settings
+from config.settings import SMALLEST_CURRENCY_UNIT_RATIO
 from item.models import Item
 
 
@@ -19,7 +20,8 @@ class ProjectStripeSession:
     The make_session() method can be used externally. All the other methods are used within the class.
     """
 
-    def __init__(self, items: list[Item], tax=None, discount=None, smallest_cur_unit_ratio=100):
+    def __init__(self, items: list[Item], tax=None, discount=None,
+                 smallest_cur_unit_ratio=SMALLEST_CURRENCY_UNIT_RATIO):
         """
         Initializes a ProjectStripeSession instance.
         Used for creating a stripe.checkout.Session.create session.
@@ -28,7 +30,7 @@ class ProjectStripeSession:
         :param tax: a pricing.Tax model instance.
         :param discount: a pricing.Discount model instance.
         :param smallest_cur_unit_ratio: currency's smallest unit ratio. Set at the level of 100 as the default value.
-        There are 100 pennies to one usd dollar. Same works for one rub.
+        For example, there are 100 pennies to one usd dollar. Same works for one rub.
         """
         self.API_KEY = settings.STRIPE_API_KEY
         self.items = items

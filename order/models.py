@@ -17,6 +17,7 @@ class Order(models.Model):
         Discount, verbose_name='order_discount', related_name='orders', on_delete=models.SET_NULL, **NULLABLE)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='created_at')
     total_price = models.DecimalField(default=0.0, decimal_places=2, max_digits=15, verbose_name='total_price')
+    currency = models.CharField(verbose_name='currency', max_length=3, **NULLABLE)
     payment_status = models.CharField(
         verbose_name='payment_status', choices=PAYMENT_STATUS, default='in_progress', max_length=12)
 
@@ -26,3 +27,8 @@ class Order(models.Model):
     class Meta:
         verbose_name = 'Order'
         verbose_name_plural = 'Orders'
+
+# todo:
+#  2. Docker
+#  3. VM
+#  4. Readme
