@@ -13,7 +13,8 @@ class Order(models.Model):
 
     items = models.ManyToManyField(Item, verbose_name='order_items', related_name='orders')
     tax = models.ForeignKey(Tax, verbose_name='order_tax', related_name='orders', on_delete=models.SET_NULL, **NULLABLE)
-    discounts = models.ManyToManyField(Discount, verbose_name='order_discount', related_name='orders')
+    discount = models.ForeignKey(
+        Discount, verbose_name='order_discount', related_name='orders', on_delete=models.SET_NULL, **NULLABLE)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='created_at')
     total_price = models.DecimalField(default=0.0, decimal_places=2, max_digits=15, verbose_name='total_price')
     payment_status = models.CharField(

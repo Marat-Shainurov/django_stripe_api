@@ -6,8 +6,8 @@ from pricing.models.tax import Tax
 
 @admin.register(Discount)
 class AdminDiscount(admin.ModelAdmin):
-    list_display = ('id', 'name', 'amount',)
-    list_filter = ('amount',)
+    list_display = ('id', 'name', 'amount_off', 'percent_off')
+    list_filter = ('amount_off', 'percent_off')
     search_fields = ('id', 'name',)
 
 
