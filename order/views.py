@@ -5,6 +5,7 @@ from config.settings import SMALLEST_CURRENCY_UNIT_RATIO
 from order.service import ProjectStripeSession
 from order.forms import OrderForm
 from order.models import Order
+from order.tasks import set_payment_status_check_schedule
 
 
 class CreateOrderView(generic.CreateView):
@@ -34,6 +35,8 @@ class CreateOrderView(generic.CreateView):
                 self.object.save()
 
                 self.request.session['checkout_url'] = stripe_session['url']
+                set_payment_status_check_schedule(order_id=self.object.pk, stripe_session_id=stripe_session['id'])
+
                 return super().form_valid(form)
             else:
                 ValidationError('Select items for your order')

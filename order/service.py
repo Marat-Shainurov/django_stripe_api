@@ -20,8 +20,7 @@ class ProjectStripeSession:
     The make_session() method can be used externally. All the other methods are used within the class.
     """
 
-    def __init__(self, items: list[Item], tax=None, discount=None,
-                 smallest_cur_unit_ratio=SMALLEST_CURRENCY_UNIT_RATIO):
+    def __init__(self, items: list[Item], tax=None, discount=None):
         """
         Initializes a ProjectStripeSession instance.
         Used for creating a stripe.checkout.Session.create session.
@@ -29,8 +28,6 @@ class ProjectStripeSession:
         :param items: a list of item.Item instances.
         :param tax: a pricing.Tax model instance.
         :param discount: a pricing.Discount model instance.
-        :param smallest_cur_unit_ratio: currency's smallest unit ratio. Set at the level of 100 as the default value.
-        For example, there are 100 pennies to one usd dollar. Same works for one rub.
         """
         self.API_KEY = settings.STRIPE_API_KEY
         self.items = items
@@ -40,7 +37,9 @@ class ProjectStripeSession:
             self.tax_behavior = 'inclusive'
         self.tax = tax
         self.discount = discount
-        self.smallest_cur_unit_ratio = smallest_cur_unit_ratio
+        # Currency's smallest unit ratio. Set at the level of 100 as the default value.
+        # For example, there are 100 pennies to one usd dollar. Same works for one rub.
+        self.smallest_cur_unit_ratio = SMALLEST_CURRENCY_UNIT_RATIO
         self.conversion_rate = 0.011
 
         stripe.api_key = settings.STRIPE_API_KEY
@@ -101,15 +100,18 @@ class ProjectStripeSession:
         :return: a list of dicts (stripe_product responses with extra 'item_price' and 'item_currency' key-val pairs)
         """
         stripe_products_list = []
-        items_have_same_cur = len({item.currency for item in self.items}) == 1
+        items_have_same_currency = len({item.currency for item in self.items}) == 1
 
         for item in self.items:
             try:
                 stripe_product = stripe.Product.create(name=item.name)
-                converted_price = self.__convert_to_common_currency(item) if not items_have_same_cur else (
-                    item.price, item.currency)
-                stripe_product['item_price'] = int(converted_price[0])
-                stripe_product['item_currency'] = converted_price[1]
+                if not items_have_same_currency:
+                    converted_price = self.__convert_to_common_currency(item)
+                    stripe_product['item_price'] = int(converted_price[0])
+                    stripe_product['item_currency'] = converted_price[1]
+                else:
+                    stripe_product['item_price'] = int(item.price) * self.smallest_cur_unit_ratio
+                    stripe_product['item_currency'] = item.currency
                 stripe_products_list.append(stripe_product)
             except StripeError as e:
                 raise ProjectStripeError(f'Error during creating Stripe product: {str(e)}')
@@ -196,6 +198,19 @@ class ProjectStripeSession:
             return stripe_session
         except StripeError as e:
             raise ProjectStripeError(f'Error during creating Stripe session: {str(e)}')
+
+    @staticmethod
+    def get_payment_status(session_id: str) -> bool:
+        """
+        Checks whether a payment has been made or not.
+        Retrieves the Stripe Checkout Session by its id.
+
+        :param session_id: a Stripe Checkout Session id.
+        :return: True is session['payment_status'] == 'paid', otherwise returns False
+        """
+        stripe.api_key = settings.STRIPE_API_KEY
+        payment_info = stripe.checkout.Session.retrieve(session_id)
+        return payment_info['payment_status'] == 'paid'
 
     def make_session(self):
         """
