@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.views import generic
 
 from order.service import ProjectStripeSession
@@ -17,14 +18,18 @@ class CreateOrderView(generic.CreateView):
     def form_valid(self, form):
         self.object = form.save()
         if form.is_valid():
-            items = form.cleaned_data['items']
-            discount = form.cleaned_data['discount']
-            tax = form.cleaned_data['tax']
-            project_stripe_obj = ProjectStripeSession(
-                items=items,
-                discount=discount,
-                tax=tax)
-            stripe_session = project_stripe_obj.make_session()
-            self.request.session['checkout_url'] = stripe_session['url']
+            items = form.cleaned_data.get('items', [])
+            discount = form.cleaned_data.get('discount', None)
+            tax = form.cleaned_data.get('tax', None)
 
-            return super().form_valid(form)
+            if items:
+                project_stripe_obj = ProjectStripeSession(
+                    items=items,
+                    discount=discount,
+                    tax=tax)
+                stripe_session = project_stripe_obj.make_session()
+                self.request.session['checkout_url'] = stripe_session['url']
+
+                return super().form_valid(form)
+            else:
+                ValidationError('Select items for your order')
