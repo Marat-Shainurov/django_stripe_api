@@ -7,7 +7,7 @@ from pricing.models.tax import Tax
 
 class Order(models.Model):
     PAYMENT_STATUS = [
-        ('in_progress', 'In_Progress'),
+        ('unpaid', 'Unpaid'),
         ('paid', 'Paid'),
     ]
 
@@ -19,7 +19,7 @@ class Order(models.Model):
     total_price = models.DecimalField(default=0.0, decimal_places=2, max_digits=15, verbose_name='total_price')
     currency = models.CharField(verbose_name='currency', max_length=3, **NULLABLE)
     payment_status = models.CharField(
-        verbose_name='payment_status', choices=PAYMENT_STATUS, default='in_progress', max_length=12)
+        verbose_name='payment_status', choices=PAYMENT_STATUS, default='unpaid', max_length=6)
 
     def __str__(self):
         return f'Order {self.pk} - {self.created_at}'

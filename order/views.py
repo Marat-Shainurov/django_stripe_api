@@ -5,7 +5,7 @@ from config.settings import SMALLEST_CURRENCY_UNIT_RATIO
 from order.service import ProjectStripeSession
 from order.forms import OrderForm
 from order.models import Order
-from order.tasks import set_payment_status_check_schedule
+from order.tasks import set_payment_status_check_schedule, set_disabler_schedule
 
 
 class CreateOrderView(generic.CreateView):
@@ -15,9 +15,19 @@ class CreateOrderView(generic.CreateView):
     template_name = 'order/create_order.html'
 
     def get_success_url(self):
+        """
+        Sets the Stripe Checkout Session url as the successful url for the Order creating.
+        The url is collected from the self.request.session object.
+        """
         return self.request.session.get('checkout_url')
 
     def form_valid(self, form):
+        """
+        Checks whether the form is valid, assigns the 'total_price', 'currency' fields values to the Order instance,
+        sets the schedule of the periodic task (set_payment_status_check_schedule) to monitor the payment_status of the
+        Stripe Checkout Session, and the schedule of the one-off task (set_disabler_schedule) to disable the
+        set_payment_status periodic task if the Order is paid of the payment expired (exp time - 30 minutes).
+        """
         self.object = form.save()
         if form.is_valid():
             items = form.cleaned_data.get('items', [])
@@ -35,7 +45,9 @@ class CreateOrderView(generic.CreateView):
                 self.object.save()
 
                 self.request.session['checkout_url'] = stripe_session['url']
-                set_payment_status_check_schedule(order_id=self.object.pk, stripe_session_id=stripe_session['id'])
+
+                set_payment_status_check_schedule.delay(order_id=self.object.pk, stripe_session_id=stripe_session['id'])
+                set_disabler_schedule.delay(order_id=self.object.pk)
 
                 return super().form_valid(form)
             else:

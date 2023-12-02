@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+
+import pytz
 import stripe
 from stripe import TaxRate
 from stripe.api_resources.checkout import Session
@@ -190,6 +193,8 @@ class ProjectStripeSession:
         stripe_prices = self.__create_stripe_price_list()
         stripe_discounts = self.__create_stripe_discount() if self.discount else None
         stripe_tax = self.__create_stripe_tax() if self.tax else None
+        exp_timestamp = int((datetime.now(tz=pytz.timezone(settings.TIME_ZONE)) + timedelta(seconds=1800)).timestamp())
+
         try:
             stripe_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
@@ -201,6 +206,7 @@ class ProjectStripeSession:
                         'tax_rates': [stripe_tax['id']] if self.tax else None
                     } for price in stripe_prices],
                 mode="payment",
+                expires_at=exp_timestamp,
                 discounts=[{'coupon': stripe_discounts['id']}] if self.discount else None)
             return stripe_session
         except StripeError as e:
