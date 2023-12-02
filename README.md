@@ -20,19 +20,19 @@ Integrated APIs: Stripe API (for handling checkouts), fixer.io API (for getting 
       Test mode credit card number: 4242 4242 4242 4242; exp. date and cvv code - any data.
     - **[Buy Item]** http://127.0.0.1:8000/buy/{item_id} \
       Returns an object, type of: {'stripe_session_id': stripe_session['id'], 'checkout_url': stripe_session['url']}
-    - [Create Order] http://127.0.0.1:8000/order/create \
+    - **[Create Order]** http://127.0.0.1:8000/order/create \
       You can create and buy orders on this page. \
-      Test mode credit card number: 4242 4242 4242 4242; exp. date and cvv code - any data. \
+      Test mode credit card number: 4242 4242 4242 4242; exp. date, cvv code, client's info - any data. \
       Each created order is being checked for the payment status by periodic celery task every 2 minutes. \
       When the corresponding checkout session payment status changed from 'unpaid' to 'paid' 
       (i.e. the checkout session is paid by customer) the order instance's 'payment_status' field is set to the 'paid' status.
-    - [Admin interface] http://127.0.0.1:8000/admin
+    - **[Admin interface]** http://127.0.0.1:8000/admin
 
 # Fixture
 
-1. Fixture loading is included to the docker startup process.
+1. The fixture loading is already included to the docker startup process (python manage.py loaddata > test_fixture.json).
     - 4 testing Item instances are created, 3 Discount items, 3 Tax instances. 
-    - Use the o create new instances from the admin interface.
+    - Use them or create new instances from the admin interface.
     - Orders must be created only from the order/create endpoint.
 2. Testing superuser credentials:
     - {"username": "test_superuser", "password": 123}. Use these credentials for the admin site.
