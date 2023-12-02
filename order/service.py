@@ -6,6 +6,7 @@ from stripe.error import StripeError
 from config import settings
 from config.settings import SMALLEST_CURRENCY_UNIT_RATIO
 from item.models import Item
+from order.utils import get_conversion_rate
 
 
 class ProjectStripeError(Exception):
@@ -38,25 +39,28 @@ class ProjectStripeSession:
         self.tax = tax
         self.discount = discount
         # Currency's smallest unit ratio. Set at the level of 100 as the default value.
-        # For example, there are 100 pennies to one usd dollar. Same works for one rub.
+        # For example, there are 100 cents to one euro. Same works for one rub.
         self.smallest_cur_unit_ratio = SMALLEST_CURRENCY_UNIT_RATIO
-        self.conversion_rate = 0.011
+        self.base_curr = 'EUR'
+        self.second_curr = 'RUB'
+        # fixer.io API is used to get the latest currency rate dynamically
+        self.conversion_rate = get_conversion_rate(base_curr=self.base_curr, second_curr=self.second_curr)
 
         stripe.api_key = settings.STRIPE_API_KEY
 
     def __convert_to_common_currency(self, item: Item) -> tuple:
         """
-        Auxiliary method to convert an item's currency the common value ('usd').
+        Auxiliary method to convert an item's currency the common value (self.base_curr).
         Used in self.__create_stripe_product_list when the self.items list of Item instances contain items
         with different currencies.
 
         :param item: an item.Item instance.
         """
-        if item.currency == 'usd':
-            return int(item.price) * self.smallest_cur_unit_ratio, 'usd'
+        if item.currency == self.base_curr.lower():
+            return int(item.price) * self.smallest_cur_unit_ratio, self.base_curr.lower()
         else:
             converted_price = int(item.price) * self.smallest_cur_unit_ratio * self.conversion_rate
-            return converted_price, 'usd'
+            return converted_price, self.base_curr.lower()
 
     def __create_stripe_tax(self) -> TaxRate:
         """
@@ -67,8 +71,8 @@ class ProjectStripeSession:
         """
         stripe_tax = stripe.TaxRate.create(
             percentage=self.tax.rate,
-            description=f'Tax {self.tax.id}',
-            display_name=f'Tax {self.tax.id}',
+            description=f'Tax {self.tax.name}',
+            display_name=f'Tax {self.tax.name}',
             inclusive=False,
         )
         return stripe_tax
@@ -93,8 +97,8 @@ class ProjectStripeSession:
         """
         Creates a list of Stripe Product object.
         The method is used when several Item object are passed as an order.
-        If all the items have the same currency - their set currency is used (usd or rub).
-        If all the items have different currencies - usd currency is used as the common currency via the
+        If all the items have the same currency - their set currency is used (self.base_curr or self.second_curr).
+        If all the items have different currencies - self.base_curr is used as the common currency via the
         self.__convert_to_common_currency method, in order to avert issues during the Checkout Session creation.
 
         :return: a list of dicts (stripe_product responses with extra 'item_price' and 'item_currency' key-val pairs)
@@ -148,8 +152,11 @@ class ProjectStripeSession:
         Creates a Stripe Coupon object, based on the self.discount (pricing.Discount) instance fields' values.
         If the self.discount.amount_off is set the discount's currency is also configured:
         - If a single item is being purchased the self.item.currency is used as the amount_off currency.
-        - If all the items have the same currency - their set currency is used (usd or rub).
-        - If all the items have different currencies - usd currency is set as the common currency for the discount.
+        - If all the items have the same currency - their set currency is used (self.base_curr or self.second_curr).
+        - If all the items have different currencies - self.base_curr currency is set as the common discount currency.
+          It is not recommended to use the amount_off mode dealing with items with different currencies (use percent_off
+          instead), or take it into account while setting the amount_off value of the pricing.Discount instance.
+
 
         :return: a Stripe Coupon object.
         """
@@ -160,7 +167,7 @@ class ProjectStripeSession:
             if items_have_same_cur:
                 amount_off_currency = self.items[0].currency
             else:
-                amount_off_currency = 'usd'
+                amount_off_currency = self.base_curr.lower()
 
         stripe_discount = stripe.Coupon.create(
             duration='once',

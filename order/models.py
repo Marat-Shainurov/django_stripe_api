@@ -27,8 +27,3 @@ class Order(models.Model):
     class Meta:
         verbose_name = 'Order'
         verbose_name_plural = 'Orders'
-
-# todo:
-#  2. Docker
-#  3. VM
-#  4. Readme

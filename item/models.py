@@ -6,7 +6,7 @@ NULLABLE = {'blank': True, 'null': True}
 class Item(models.Model):
     CURRENCY = {
         ('rub', 'RUB'),
-        ('usd', 'USD')
+        ('eur', 'EUR')
     }
 
     name = models.CharField(verbose_name='name', max_length=150)
