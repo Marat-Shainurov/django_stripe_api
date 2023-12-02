@@ -1,0 +1,93 @@
+version: '3'
+
+services:
+
+  db:
+    image: postgres
+    container_name: db_django_stripe_api
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ${DATABASES_NAME}
+      POSTGRES_PASSWORD: ${DATABASES_PASSWORD}
+    volumes:
+      - postgres_data_django_stripe_api:/var/lib/postgresql/data/pgdata
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${DATABASES_NAME}", "-U", "${DATABASES_USER}", "-h", "db", "-p", "${DATABASES_PORT}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7.0.2-alpine
+    container_name: redis_django_stripe_api
+    command: redis-server --save 20 1 --loglevel warning
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data_django_stripe_api:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  app:
+    build: .
+    container_name: app_django_stripe_api
+    command: sh -c "python manage.py migrate && python manage.py loaddata test_fixture.json && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - '8000:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+
+  celery:
+    build: .
+    container_name: celery_django_stripe_api
+    command: celery -A config worker -l INFO
+    volumes:
+      - celery_data_django_stripe_api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_LOG_LEVEL=debug
+    healthcheck:
+      test: [ "CMD", "celery", "inspect", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  celery-beat:
+    build: .
+    container_name: celery_beat_django_stripe_api
+    command: celery -A config beat -l info -S django
+    volumes:
+      - celery_beat_data_django_stripe_api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_LOG_LEVEL=debug
+
+volumes:
+  postgres_data_django_stripe_api:
+  redis_data_django_stripe_api:
+  celery_data_django_stripe_api:
+  celery_beat_data_django_stripe_api:
+

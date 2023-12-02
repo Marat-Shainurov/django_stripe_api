@@ -26,9 +26,9 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = 'django-insecure-s%v!7xv2hk(7stogf5qf#2%ld9hjdy0b_!*r=)(52t(jmkc7hr'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -83,9 +83,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'django_stripe_api_db',
-        'USER': 'postgres',
-        'PASSWORD': 'Benzokolon1'
+        'NAME': os.getenv('DATABASES_NAME'),
+        'PASSWORD': os.getenv('DATABASES_PASSWORD'),
+        'USER': os.getenv('DATABASES_USER'),
+        'PORT': os.getenv('DATABASES_PORT'),
+        'HOST': 'db',
     }
 }
 
@@ -134,11 +136,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SMALLEST_CURRENCY_UNIT_RATIO = 100
 
-STRIPE_API_KEY = 'sk_test_51NXmWXJiDDtWvXOb6yqZ6UDCLLz8kr1wtRVVqMeyDHSL0oIQYlLhUjHDOwKlInBUuUACFQ6zcyO3IhzZTFPfYvM300KGnycyF7'
-FIXER_API_KEY = 'daf1f979abd2d667ef92849b7a2c8187'
+STRIPE_API_KEY = os.getenv('STRIPE_API_KEY')
+FIXER_API_KEY = os.getenv('FIXER_API_KEY')
 
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TIMEZONE = os.getenv('TIME_ZONE')
