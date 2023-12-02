@@ -6,50 +6,35 @@ Integrated APIs: Stripe API (for handling checkouts), fixer.io API (for getting 
 
 # Install and usage
 
-1. **Clone** the project from https://github.com/Marat-Shainurov/drf_library to your local machine.
+1. **Clone** the project from https://github.com/Marat-Shainurov/django_stripe_api to your local machine.
 
 2. Create **.env** file in the root directory (next to the docker-compose file) with the variables from .env_sample.
-    - You have to add your EMAIL_HOST_USER and EMAIL_HOST_PASSWORD. EMAIL_HOST configured in the project - '
-      smtp.yandex.ru'.
-    - You have to add MYSQL_DATABASE and MYSQL_ROOT_PASSWORD variables for the database setup.
 
-3. Build and run a new **docker** image from the project's root directory:
+3. Build and startup a new **docker** container from the project's root directory:
     - docker-compose up --build
 
-    3307 port is used for the database outside the docker container, in case the standard 3306 port is already in use.
+4. Start working with the app's endpoints:
 
-4. After successful startup check out the project's endpoints (swagger or redoc **documentation** formats are
-   available):
-    - [Swagger Documentation] http://127.0.0.1:8000/docs/
-    - [ReDoc Documentation] http://127.0.0.1:8000/redoc/
-
-5. Start working with the app's endpoints:
-
-      **users (authorization is not required)** 
-    - [Register User] http://127.0.0.1:8000/users/register
-    - [Get Token] http://127.0.0.1:8000/users/token 
-
-      **library (authorization is required, can be tested via Postman, with Bearer token provided from users/token)**
-    - [Books List] http://127.0.0.1:8000/library/books
-    - [Create Book] http://127.0.0.1:8000/library/books/create
-    - [Get Book by ID] http://127.0.0.1:8000/library/books/get/{id}
-    - [Update Book by ID (both PATCH and PUT methods)] http://127.0.0.1:8000/library/books/update/{id}
-    - [Delete Book by ID] http://127.0.0.1:8000/library/books/delete/{id} 
-
-      **admin site** is also configured 
+    - **[Item Detail]** http://127.0.0.1:8000/item/{item_id} \
+      You can get details about an Item and buy it.
+      Test mode credit card number: 4242 4242 4242 4242; exp. date and cvv code - any data.
+    - **[Buy Item]** http://127.0.0.1:8000/buy/{item_id} \
+      Returns an object, type of: {'stripe_session_id': stripe_session['id'], 'checkout_url': stripe_session['url']}
+    - [Create Order] http://127.0.0.1:8000/order/create \
+      You can create and buy orders on this page. \
+      Test mode credit card number: 4242 4242 4242 4242; exp. date and cvv code - any data. \
+      Each created order is being checked for the payment status by periodic celery task every 2 minutes. \
+      When the corresponding checkout session payment status changed from 'unpaid' to 'paid' 
+      (i.e. the checkout session is paid by customer) the order instance's 'payment_status' field is set to the 'paid' status.
     - [Admin interface] http://127.0.0.1:8000/admin
 
 # Fixture
 
-1. If necessary the testing fixture may be loaded (with 2 CustomUser and 2 Book testing instances):
-    - docker-compose exec app python manage.py loaddata test_fixture.json
-2. Testing users and credentials:
-    - {"username": "test_superuser", "password": "123"}
-    - {"username": "test_user", "password": "QWE123qwe123!"}
+1. Fixture loading is included to the docker startup process.
+    - 4 testing Item instances are created, 3 Discount items, 3 Tax instances. 
+    - Use the o create new instances from the admin interface.
+    - Orders must be created only from the order/create endpoint.
+2. Testing superuser credentials:
+    - {"username": "test_superuser", "password": 123}. Use these credentials for the admin site.
 
-# Testing
-
-1. All the endpoints are covered with unittests in users/tests.py and library/tests.py
-2. Run tests from the running docker container:
-    - docker-compose exec app python manage.py test
 
