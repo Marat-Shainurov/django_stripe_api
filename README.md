@@ -24,8 +24,9 @@ Integrated APIs: Stripe API (for handling checkouts), fixer.io API (for getting 
       You can create and buy orders on this page. \
       Test mode credit card number: 4242 4242 4242 4242; exp. date, cvv code, client's info - any data. \
       Each created order is being checked for the payment status by periodic celery task every 2 minutes. \
-      When the corresponding checkout session payment status changed from 'unpaid' to 'paid' 
-      (i.e. the checkout session is paid by customer) the order instance's 'payment_status' field is set to the 'paid' status.
+      When the corresponding checkout session payment's status is changed from 'unpaid' to 'paid' 
+      (i.e. the checkout session is paid by customer) the order instance's 'payment_status' field is set to the 'paid' status. \
+      The expiration period is set to 30 minutes both for the Stripe Checkout Session and the payment status check periodic task. 
     - **[Admin interface]** http://127.0.0.1:8000/admin
 
 # Fixture
