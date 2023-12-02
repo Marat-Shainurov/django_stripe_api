@@ -3,6 +3,7 @@ import pytz
 from datetime import datetime, timedelta
 
 from celery import shared_task
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django_celery_beat.models import IntervalSchedule, PeriodicTask, ClockedSchedule
 
@@ -15,13 +16,19 @@ from order.service import ProjectStripeSession
 def disable_payment_status_check(order_id: str) -> None:
     """
     Sets the 'task.enable' field to False if the order has been paid, and there is no need to check its
-    payment status again.
+    payment status again. It also disables the one-off status check disabler task.
 
-    :param order_id: id of the paid Order instance.
+    :param order_id: id of the paid Order instance, expected to be paid.
     """
-    task = PeriodicTask.objects.get(name=f'Payment status check for Order {order_id}')
-    task.enabled = False
-    task.save()
+    try:
+        task = PeriodicTask.objects.get(name=f'Payment status check for Order {order_id}')
+        task.enabled = False
+        task.save()
+        task_disabler = PeriodicTask.objects.get(name=f'Disables payment status check for Order {order_id}')
+        task_disabler.enabled = False
+        task_disabler.save()
+    except ObjectDoesNotExist:
+        raise ValidationError(f"Couldn't disable the Payment status check for Order {order_id}")
 
 
 @shared_task
@@ -54,14 +61,18 @@ def set_payment_status_check_schedule(order_id, stripe_session_id) -> None:
     )
     start_time = datetime.now(tz=pytz.timezone(settings.TIME_ZONE)) + timedelta(seconds=120)
 
-    PeriodicTask.objects.create(
-        interval=schedule,
-        start_time=start_time,
-        name=f'Payment status check for Order {order_id}',
-        task='order.tasks.set_payment_status',
-        args=json.dumps([order_id, stripe_session_id]),
-        kwargs={}
-    )
+    try:
+        PeriodicTask.objects.create(
+            interval=schedule,
+            start_time=start_time,
+            name=f'Payment status check for Order {order_id}',
+            task='order.tasks.set_payment_status',
+            args=json.dumps([order_id, stripe_session_id]),
+            kwargs={}
+        )
+    except Exception as e:
+        raise ValidationError(
+            f"Couldn't create a PeriodicTask for the set_payment_status_check_schedule schedule: {str(e)}")
 
 
 @shared_task
@@ -80,11 +91,15 @@ def set_disabler_schedule(order_id: str):
     schedule, created = ClockedSchedule.objects.get_or_create(
         clocked_time=disable_at
     )
-    PeriodicTask.objects.create(
-        clocked=schedule,
-        one_off=True,
-        name=f'Disables payment status check for Order {order_id}',
-        task='order.tasks.disable_payment_status_check',
-        args=json.dumps([order_id, ]),
-        kwargs={},
-    )
+    try:
+        PeriodicTask.objects.create(
+            clocked=schedule,
+            one_off=True,
+            name=f'Disables payment status check for Order {order_id}',
+            task='order.tasks.disable_payment_status_check',
+            args=json.dumps([order_id, ]),
+            kwargs={},
+        )
+    except Exception as e:
+        raise ValidationError(
+            f"Couldn't create a PeriodicTask for the set_disabler_schedule schedule: {str(e)}")
