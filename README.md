@@ -8,7 +8,8 @@ Integrated APIs: Stripe API (for handling checkouts), fixer.io API (for getting 
 
 1. **Clone** the project from https://github.com/Marat-Shainurov/django_stripe_api to your local machine.
 
-2. Create **.env** file in the root directory (next to the docker-compose file) with the variables from .env_sample.
+2. Create **.env** file in the root directory (next to the docker-compose file) with the variables from .env_sample. \
+   **For convenience of checking the work** I kept the used env variables and their values in env_sample.
 
 3. Build and startup a new **docker** container from the project's root directory:
     - docker-compose up --build
