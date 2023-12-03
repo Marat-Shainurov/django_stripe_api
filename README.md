@@ -38,4 +38,10 @@ Integrated APIs: Stripe API (for handling checkouts), fixer.io API (for getting 
 2. Testing superuser credentials:
     - {"username": "test_superuser", "password": 123}. Use these credentials for the admin site.
 
+# Deployment
 
+1. The project is also deployed on the virtual machine (158.160.15.108):
+   - **[Item Detail]** http://158.160.15.108/item/{item_id}
+   - **[Buy Item]** http://158.160.15.108/buy/{item_id}
+   - **[Create Order]** http://158.160.15.108/order/create
+   - **[Admin interface]** http://158.160.15.108/admin
